@@ -39,14 +39,13 @@ trait ApiDefinitionConnector {
     Logger.info(s"${this.getClass.getSimpleName} - fetchAllApiDefinitions")
     val r= http.GET[Seq[APIDefinition]](definitionsUrl(serviceBaseUrl), queryParams(email))
 
-    r.map(defns => defns.foreach(defn => Logger.info(s"Found ${defn.name}")))
+    r.foreach(_.foreach(defn => Logger.info(s"Found ${defn.name}")))
 
     r.map(e => e.sortBy(
       _.name
     ))
     .recover {
       case _ : NotFoundException => { Logger.info("Not found"); Seq.empty}
-      case e : Upstream5xxResponse => { Logger.error(s"Failed ${e}"); throw e}
       case e => { Logger.error(s"Failed ${e}"); throw e}
     }
   }
@@ -55,12 +54,11 @@ trait ApiDefinitionConnector {
     Logger.info(s"${this.getClass.getSimpleName} - fetchApiDefinition")
     val r = http.GET[ExtendedAPIDefinition](definitionUrl(serviceBaseUrl,serviceName), queryParams(email))
 
-    r.map(defn => Logger.info(s"Found ${defn.name}"))
+    r.foreach(defn => Logger.info(s"Found ${defn.name}"))
 
     r.map(Some(_))
       .recover {
         case _ : NotFoundException => { Logger.info("Not found"); None}
-        case e : Upstream5xxResponse => { Logger.error(s"Failed ${e}"); throw e}
         case e => { Logger.error(s"Failed ${e}"); throw e}
       }
   }
