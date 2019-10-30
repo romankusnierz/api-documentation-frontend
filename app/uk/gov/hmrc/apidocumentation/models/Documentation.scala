@@ -125,7 +125,7 @@ case class APIDefinition(
 
   // TODO - should this be context based on non-unique names
   def isIn(definitions: Seq[APIDefinition]): Boolean = {
-    definitions.find(_.name == name).isDefined
+    definitions.find(d => d.name == name && d.context == context).isDefined
   }
 
   lazy val retiredVersions = versions.filter(_.status == APIStatus.RETIRED)
@@ -190,7 +190,7 @@ case class ExtendedAPIDefinition(serviceName: String,
                                  isTestSupport: Boolean,
                                  versions: Seq[ExtendedAPIVersion]) {
 
-  def userAccessibleApiDefinition = {
+  def userAccessibleApiDefinition: ExtendedAPIDefinition = {
     def isAccessible(availability: Option[APIAvailability]) =
       availability.fold(false)(avail => avail.authorised || avail.access.isTrial.contains(true))
 
