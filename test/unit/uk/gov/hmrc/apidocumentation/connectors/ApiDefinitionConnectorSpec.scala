@@ -32,6 +32,7 @@ import uk.gov.hmrc.apidocumentation.utils.FutureTimeoutSupportImpl
 import uk.gov.hmrc.play.bootstrap.http.HttpClient
 import unit.uk.gov.hmrc.apidocumentation.utils.ApiDefinitionHttpMockingHelper
 import uk.gov.hmrc.http.{BadRequestException, HeaderCarrier, NotFoundException, Upstream5xxResponse}
+import uk.gov.hmrc.play.http.ws.WSGet
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -48,7 +49,7 @@ class ApiDefinitionConnectorSpec
 
   trait LocalSetup extends ApiDefinitionHttpMockingHelper {
     val mockConfig = mock[ApplicationConfig]
-    val mockHttpClient = mock[HttpClient]
+    val mockHttpClient = mock[HttpClient with WSGet]
 
     val apiDefinitionUrl = "/mockUrl"
     when(mockConfig.apiDefinitionPrincipalBaseUrl).thenReturn(apiDefinitionUrl)
@@ -159,7 +160,7 @@ class ApiDefinitionConnectorSpec
     val mockProxiedHttpClient = mock[ProxiedHttpClient]
     when(mockProxiedHttpClient.withHeaders(any(), any())).thenReturn(mockProxiedHttpClient)
 
-    val mockHttpClient = mock[HttpClient]
+    val mockHttpClient = mock[HttpClient with WSGet]
 
     val connector = new SubordinateApiDefinitionConnector(
       mockAppConfig,
