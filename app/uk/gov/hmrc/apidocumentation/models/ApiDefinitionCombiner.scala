@@ -21,7 +21,7 @@ trait ApiDefinitionCombiner {
 
   def apiHasActiveVersions(api: APIDefinition): Boolean = api.hasActiveVersions
 
-  def combineDefintions(subordinateDefinitions: Seq[APIDefinition], principalDefinitions: Seq[APIDefinition]) = {
+  def combineDefintions(principalDefinitions: Seq[APIDefinition], subordinateDefinitions: Seq[APIDefinition]): Seq[APIDefinition] = {
 
     (subordinateDefinitions ++ principalDefinitions.filterNot(_.isIn(subordinateDefinitions)))
       .filter(apiHasActiveVersions)

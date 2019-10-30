@@ -32,6 +32,16 @@ trait ApiDefinitionTestDataHelper {
     )
   }
 
+  implicit class ApiDefintionModifier(val inner: APIDefinition) {
+    def requiresTrust(is: Option[Boolean]): APIDefinition = inner.copy(requiresTrust = is)
+
+    def doesRequireTrust(): APIDefinition = requiresTrust(Some(true))
+    def doesNotRequireTrust(): APIDefinition = requiresTrust(Some(false))
+    def trustNotSpecified(): APIDefinition = requiresTrust(None)
+
+    def withName(name: String): APIDefinition = inner.copy(name = name)
+  }
+
   implicit class ApiAccessModifier(val inner: APIAccess) {
     def asPublic : APIAccess = {
       inner.copy(`type` = APIAccessType.PUBLIC)

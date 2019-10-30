@@ -87,7 +87,7 @@ class ApiDefinitionCombinerSpec
       val data2 = testDefn("B", apiVersion1).withName("C")
       val data3 = testDefn("B", apiVersion1).withName("B")
 
-      val result = underTest.combineDefintions(Seq.empty, Seq(data1,data2,data3))
+      val result = underTest.combineDefintions(Seq(data1,data2,data3), Seq.empty)
 
       result.map(_.name) shouldBe Seq("A", "B", "C")
     }
@@ -96,7 +96,7 @@ class ApiDefinitionCombinerSpec
       val data1 = testDefn("AllRetired", apiVersion1.asRETIRED,apiVersion2.asRETIRED)
       val data2 = testDefn("SomeRetired", apiVersion1.asRETIRED, apiVersion2)
 
-      val result = underTest.combineDefintions(Seq.empty, Seq(data1, data2))
+      val result = underTest.combineDefintions(Seq(data1, data2), Seq.empty)
       result.map(_.serviceName) should not contain ("AllRetired")
       result.map(_.serviceName) should contain ("SomeRetired")
     }
@@ -105,7 +105,7 @@ class ApiDefinitionCombinerSpec
       val data1 = testDefn("TrustRequired", apiVersion1).doesRequireTrust()
       val data2 = testDefn("NoTrustRequired", apiVersion1).trustNotSpecified()
 
-      val result = underTest.combineDefintions(Seq.empty, Seq(data1, data2))
+      val result = underTest.combineDefintions(Seq(data1, data2), Seq.empty)
       result.map(_.serviceName) should not contain ("TrustRequired")
       result.map(_.serviceName) should contain ("NoTrustRequired")
     }
@@ -115,7 +115,7 @@ class ApiDefinitionCombinerSpec
       val data2 = testDefn("B", apiVersion1).withName("B")
       val data3 = testDefn("C", apiVersion1).withName("C")
 
-      val result =  underTest.combineDefintions(Seq(data1, data2), Seq(data2, data3))
+      val result =  underTest.combineDefintions(Seq(data2, data3), Seq(data1, data2))
       result should have size(3)
 
       result.map(_.name) shouldBe Seq("A","B","C")

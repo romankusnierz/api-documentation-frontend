@@ -17,7 +17,7 @@
 package uk.gov.hmrc.apidocumentation.services
 
 import javax.inject.{Inject, Singleton}
-import uk.gov.hmrc.apidocumentation.models.{APIDefinition, ExtendedAPIDefinition, ExtendedAPIVersion}
+import uk.gov.hmrc.apidocumentation.models.{APIDefinition, ApiDefinitionCombiner, ExtendedAPIDefinition, ExtendedAPIVersion, ExtendedApiDefinitionCombiner}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -26,32 +26,20 @@ import scala.concurrent.{ExecutionContext, Future}
 class ProxyAwareApiDefinitionService @Inject()(principal: PrincipalApiDefinitionService,
                                                subordinate: SubordinateApiDefinitionService
                                               )(implicit val ec: ExecutionContext)
-                                              extends BaseApiDefinitionService {
+  extends BaseApiDefinitionService
+    with ApiDefinitionCombiner
+    with ExtendedApiDefinitionCombiner{
 
   def fetchAllDefinitions(thirdPartyDeveloperEmail: Option[String])
                          (implicit hc: HeaderCarrier): Future[Seq[APIDefinition]] = {
 
     val principalFuture = principal.fetchAllDefinitions(thirdPartyDeveloperEmail)
     val subordinateFuture = subordinate.fetchAllDefinitions(thirdPartyDeveloperEmail)
-    mergeSeqsOfDefinitions(subordinateFuture,principalFuture) map filterDefinitions
-  }
 
-  private def mergeSeqsOfDefinitions(subordinateFuture: Future[Seq[APIDefinition]], principalFuture: Future[Seq[APIDefinition]]) = {
     for {
       subordinateDefinitions <- subordinateFuture
       principalDefinitions <- principalFuture
-    } yield (subordinateDefinitions ++ principalDefinitions.filterNot(_.isIn(subordinateDefinitions))).sortBy(_.name)
-  }
-
-  def filterDefinitions(apis: Seq[APIDefinition]): Seq[APIDefinition] = {
-    def apiRequiresTrust(api: APIDefinition): Boolean = {
-      api.requiresTrust match {
-        case Some(true) => true
-        case _ => false
-      }
-    }
-
-    apis.filter(api => !apiRequiresTrust(api) && api.hasActiveVersions)
+    } yield combineDefintions(principalDefinitions, subordinateDefinitions)
   }
 
   def fetchExtendedDefinition(serviceName: String, thirdPartyDeveloperEmail: Option[String])
@@ -62,49 +50,6 @@ class ProxyAwareApiDefinitionService @Inject()(principal: PrincipalApiDefinition
     for {
       maybePrincipalDefinition <- principalFuture
       maybeSubordinateDefinition <- subordinateFuture
-      combined = combine(maybePrincipalDefinition, maybeSubordinateDefinition)
-    } yield combined.filterNot(_.requiresTrust)
-  }
-
-  private def combine(maybePrincipalDefinition: Option[ExtendedAPIDefinition], maybeSubordinateDefinition: Option[ExtendedAPIDefinition]) = {
-    def findProductionDefinition(maybePrincipalDefinition: Option[ExtendedAPIDefinition], maybeSubordinateDefinition: Option[ExtendedAPIDefinition]) = {
-      if (maybePrincipalDefinition.exists(_.versions.exists(_.productionAvailability.isDefined))) {
-        maybePrincipalDefinition
-      } else {
-        maybeSubordinateDefinition
-      }
-    }
-
-    def findSandboxDefinition(maybePrincipalDefinition: Option[ExtendedAPIDefinition], maybeSubordinateDefinition: Option[ExtendedAPIDefinition]) = {
-      if (maybePrincipalDefinition.exists(_.versions.exists(_.sandboxAvailability.isDefined))) {
-        maybePrincipalDefinition
-      } else {
-        maybeSubordinateDefinition
-      }
-    }
-
-    def combineVersion(maybePrincipalVersion: Option[ExtendedAPIVersion], maybeSubordinateVersion: Option[ExtendedAPIVersion]) = {
-      maybePrincipalVersion.fold(maybeSubordinateVersion) { productionVersion =>
-        maybeSubordinateVersion.fold(maybePrincipalVersion) { sandboxVersion =>
-          Some(sandboxVersion.copy(productionAvailability = productionVersion.productionAvailability))
-        }
-      }
-    }
-
-    def combineVersions(principalVersions: Seq[ExtendedAPIVersion], subordinateVersions: Seq[ExtendedAPIVersion]): Seq[ExtendedAPIVersion] = {
-      val allVersions = (principalVersions.map(_.version) ++ subordinateVersions.map(_.version)).distinct.sorted
-      allVersions.flatMap { version =>
-        combineVersion(principalVersions.find(_.version == version), subordinateVersions.find(_.version == version))
-      }
-    }
-
-    val maybeProductionDefinition = findProductionDefinition(maybePrincipalDefinition, maybeSubordinateDefinition)
-    val maybeSandboxDefinition = findSandboxDefinition(maybePrincipalDefinition, maybeSubordinateDefinition)
-
-    maybeProductionDefinition.fold(maybeSandboxDefinition) { productionDefinition =>
-      maybeSandboxDefinition.fold(maybeProductionDefinition) { sandboxDefinition =>
-        Some(sandboxDefinition.copy(versions = combineVersions(productionDefinition.versions, sandboxDefinition.versions)))
-      }
-    }
+    } yield combineExtendedApiDefinitions(maybePrincipalDefinition, maybeSubordinateDefinition)
   }
 }
