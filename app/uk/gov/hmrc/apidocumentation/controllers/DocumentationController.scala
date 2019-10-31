@@ -44,9 +44,12 @@ class DocumentationController @Inject()(documentationService: DocumentationServi
                                         partialsService: PartialsService,
                                         loggedInUserProvider: LoggedInUserProvider,
                                         errorHandler: ErrorHandler,
-                                        val messagesApi: MessagesApi)
-                                       (implicit val appConfig: ApplicationConfig, val ec: ExecutionContext)
+                                        val messagesApi: MessagesApi,
+                                        appConfig: ApplicationConfig)
+                                       (implicit val ec: ExecutionContext)
   extends FrontendController with I18nSupport {
+
+  private implicit val ac = appConfig
 
   private lazy val cacheControlHeaders = "cache-control" -> "no-cache,no-store,max-age=0"
   private val homeCrumb = Crumb("Home", routes.DocumentationController.indexPage().url)

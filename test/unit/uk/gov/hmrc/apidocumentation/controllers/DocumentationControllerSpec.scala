@@ -45,7 +45,7 @@ import scala.concurrent.duration._
 class DocumentationControllerSpec extends UnitSpec with MockitoSugar with ScalaFutures with WithFakeApplication {
 
   class Setup(ramlPreviewEnabled: Boolean = false) extends ControllerCommonSetup{
-    implicit val appConfig = mock[ApplicationConfig]
+    val appConfig = mock[ApplicationConfig]
     val developerFrontendConnector = mock[DeveloperFrontendConnector]
     val navigationService = mock[NavigationService]
     val partialsService = new PartialsService(developerFrontendConnector)
@@ -76,7 +76,8 @@ class DocumentationControllerSpec extends UnitSpec with MockitoSugar with ScalaF
         partialsService,
         loggedInUserProvider,
         errorHandler,
-        messagesApi
+        messagesApi,
+        appConfig
       )
 
     def verifyPageRendered(
@@ -202,7 +203,7 @@ class DocumentationControllerSpec extends UnitSpec with MockitoSugar with ScalaF
     }
 
     "display the reference guide page" in new Setup {
-      when(underTest.appConfig.productionApiBaseUrl).thenReturn("https://api.service.hmrc.gov.uk")
+      when(appConfig.productionApiBaseUrl).thenReturn("https://api.service.hmrc.gov.uk")
       verifyPageRendered(underTest.referenceGuidePage()(request), pageTitle("Reference guide"),
         bodyContains = Seq("The base URL for sandbox APIs is:", "https://api.service.hmrc.gov.uk"))
     }
