@@ -67,14 +67,19 @@ class ProxyAwareApiDefinitionService @Inject()(principal: PrincipalApiDefinition
   }
 
   def fetchApiDocumentationResource(serviceName: String, version: String, resource: String)(implicit hc: HeaderCarrier): Future[Option[StreamedResponse]] = {
+    import cats.data.OptionT
     import cats.implicits._
+
+    def findVersion(defn: ExtendedAPIDefinition): Option[ExtendedAPIVersion] = {
+      defn.versions.find(_.version == version)
+    }
 
     def fetchApiVersion: Future[ExtendedAPIVersion] = {
       val error = Future.failed[ExtendedAPIVersion](new IllegalArgumentException(s"Version $version of $serviceName not found"))
 
-      fetchExtendedDefinition(serviceName, None)
-        .map(_.flatMap(_.versions.find(_.version == version)))
-        .flatMap(_.fold(error)(v => Future.successful(v)))
+      OptionT(fetchExtendedDefinition(serviceName, None))
+        .mapFilter(findVersion)
+        .getOrElseF(error)
     }
 
     def fetchSubordinateOrPrincipal(serviceName: String, version: String, resource: String) = {
