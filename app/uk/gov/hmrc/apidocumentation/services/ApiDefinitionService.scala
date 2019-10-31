@@ -18,9 +18,11 @@ package uk.gov.hmrc.apidocumentation.services
 
 import javax.inject.{Inject, Singleton}
 import play.api.Logger
+import play.api.libs.ws.StreamedResponse
 import uk.gov.hmrc.apidocumentation.config.ApplicationConfig
 import uk.gov.hmrc.apidocumentation.connectors.{ApiDefinitionConnector, PrincipalApiDefinitionConnector, SubordinateApiDefinitionConnector}
 import uk.gov.hmrc.apidocumentation.models._
+import uk.gov.hmrc.apidocumentation.utils.LogWrapper
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.http.metrics.{API, Metrics}
 
@@ -34,38 +36,68 @@ trait BaseApiDefinitionService {
                             (implicit hc: HeaderCarrier): Future[Option[ExtendedAPIDefinition]]
 
   def fetchAllDefinitions(email: Option[String])(implicit hc: HeaderCarrier): Future[Seq[APIDefinition]]
+
+  def fetchApiDocumentationResource(serviceName: String, version: String, resource: String)(implicit hc: HeaderCarrier): Future[Option[StreamedResponse]]
+
 }
 
-trait ApiDefinitionService extends BaseApiDefinitionService {
-  def raw: ApiDefinitionConnector
+trait ApiDefinitionService extends BaseApiDefinitionService with LogWrapper {
+  def connector: ApiDefinitionConnector
+
   def metrics: Metrics
 
   def api: API
+
   def enabled: Boolean
 
+
   def fetchExtendedDefinition(serviceName: String, email: Option[String] = None)
-                            (implicit hc: HeaderCarrier): Future[Option[ExtendedAPIDefinition]] =
+                             (implicit hc: HeaderCarrier): Future[Option[ExtendedAPIDefinition]] = {
+    lazy val failFn = (e: Throwable) => s"fetchExtendedDefinition($serviceName, $email) failed $e"
+
     if (enabled) {
       metrics.record(api) {
-        raw.fetchApiDefinition(serviceName, email)
+        log(failFn) {
+          connector.fetchApiDefinition(serviceName, email)
+        }
       }
     } else {
       successful(None)
     }
+  }
 
-  def fetchAllDefinitions(email: Option[String] = None)(implicit hc: HeaderCarrier): Future[Seq[APIDefinition]] =
+  def fetchAllDefinitions(email: Option[String] = None)(implicit hc: HeaderCarrier): Future[Seq[APIDefinition]] = {
+    lazy val failFn = (e: Throwable) => s"fetchAllDefinitions($email) failed $e"
+
     if (enabled) {
       metrics.record(api) {
-        raw.fetchAllApiDefinitions(email)
+        log(failFn) {
+          connector.fetchAllApiDefinitions(email)
+        }
       }
     } else {
       successful(Seq.empty)
     }
+  }
+
+  def fetchApiDocumentationResource(serviceName: String, version: String, resource: String)(implicit hc: HeaderCarrier): Future[Option[StreamedResponse]] = {
+    lazy val failFn = (e: Throwable) => s"fetchApiDocumentationResource($serviceName, $version, $resource) failed $e"
+
+    if(enabled) {
+      metrics.record(api) {
+        log(failFn) {
+          connector.fetchApiDocumentationResource(serviceName,version,resource)
+        }
+      }
+    } else {
+      successful(None)
+    }
+  }
 }
 
 @Singleton
 class PrincipalApiDefinitionService @Inject()(
-                                               val raw: PrincipalApiDefinitionConnector,
+                                               val connector: PrincipalApiDefinitionConnector,
                                                val metrics: Metrics
 ) extends ApiDefinitionService {
 
@@ -76,7 +108,7 @@ class PrincipalApiDefinitionService @Inject()(
 
 @Singleton
 class SubordinateApiDefinitionService @Inject()(
-                                                 val raw: SubordinateApiDefinitionConnector,
+                                                 val connector: SubordinateApiDefinitionConnector,
                                                  val appConfig: ApplicationConfig,
                                                  val metrics: Metrics
    ) extends ApiDefinitionService {

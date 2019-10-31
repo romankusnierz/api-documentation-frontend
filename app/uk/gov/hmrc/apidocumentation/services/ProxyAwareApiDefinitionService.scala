@@ -16,19 +16,33 @@
 
 package uk.gov.hmrc.apidocumentation.services
 
+import akka.actor.ActorSystem
+import akka.stream.Materializer
+import cats.data.OptionT
 import javax.inject.{Inject, Singleton}
+import play.api.libs.ws.StreamedResponse
+import uk.gov.hmrc.apidocumentation.config.ApplicationConfig
 import uk.gov.hmrc.apidocumentation.models.{APIDefinition, ApiDefinitionCombiner, ExtendedAPIDefinition, ExtendedAPIVersion, ExtendedApiDefinitionCombiner}
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{HeaderCarrier, NotFoundException}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ProxyAwareApiDefinitionService @Inject()(principal: PrincipalApiDefinitionService,
-                                               subordinate: SubordinateApiDefinitionService
-                                              )(implicit val ec: ExecutionContext)
-  extends BaseApiDefinitionService
-    with ApiDefinitionCombiner
-    with ExtendedApiDefinitionCombiner{
+                                               subordinate: SubordinateApiDefinitionService,
+                                               appConfig: ApplicationConfig
+                                              )
+                                              (implicit val ec: ExecutionContext,
+                                               val actorSystem: ActorSystem,
+                                               val mat: Materializer
+                                              )
+                                              extends BaseApiDefinitionService
+                                                with ExtendedApiDefinitionCombiner
+                                                with ApiDefinitionCombiner {
+
+  private def newNotFoundException(serviceName: String, version: String, resource: String) = {
+    new NotFoundException(s"$resource not found for $serviceName $version")
+  }
 
   def fetchAllDefinitions(thirdPartyDeveloperEmail: Option[String])
                          (implicit hc: HeaderCarrier): Future[Seq[APIDefinition]] = {
@@ -50,6 +64,47 @@ class ProxyAwareApiDefinitionService @Inject()(principal: PrincipalApiDefinition
     for {
       maybePrincipalDefinition <- principalFuture
       maybeSubordinateDefinition <- subordinateFuture
-    } yield combineExtendedApiDefinitions(maybePrincipalDefinition, maybeSubordinateDefinition)
+      combined = combineExtendedApiDefinitions(maybePrincipalDefinition, maybeSubordinateDefinition)
+    } yield combined.filterNot(_.requiresTrust)
+  }
+
+  def fetchApiDocumentationResource(serviceName: String, version: String, resource: String)(implicit hc: HeaderCarrier): Future[Option[StreamedResponse]] = {
+    import cats.implicits._
+
+    def fetchApiVersion: Future[ExtendedAPIVersion] = {
+      val error = Future.failed[ExtendedAPIVersion](new IllegalArgumentException(s"Version $version of $serviceName not found"))
+
+      fetchExtendedDefinition(serviceName, None)
+        .map(_.flatMap(_.versions.find(_.version == version)))
+        .flatMap(_.fold(error)(v => Future.successful(v)))
+    }
+
+    def fetchSubordinateOrPrincipal(serviceName: String, version: String, resource: String) = {
+      val subordinateData = OptionT(subordinate.fetchApiDocumentationResource(serviceName, version, resource))
+      lazy val principalData = OptionT(principal.fetchApiDocumentationResource(serviceName, version, resource))
+
+      subordinateData
+        .orElse(principalData)
+        .getOrElseF(Future.failed(newNotFoundException(serviceName, version, resource)))
+    }
+
+    def fetchPrincipalResourceOnly(serviceName: String, version: String, resource: String) = {
+      OptionT(principal.fetchApiDocumentationResource(serviceName, version, resource))
+        .getOrElseF(Future.failed(newNotFoundException(serviceName, version, resource)))
+    }
+
+    def fetchResource(isAvailableInSandbox: Boolean): Future[StreamedResponse] = {
+      // TODO : Does the none from subordinate negate the need for this ?
+      if(isAvailableInSandbox) {
+        fetchSubordinateOrPrincipal(serviceName, version, resource)
+      } else {
+        fetchPrincipalResourceOnly(serviceName, version, resource)
+      }
+    }
+
+    for {
+      apiVersion <- fetchApiVersion
+      response <- fetchResource(apiVersion.sandboxAvailability.isDefined)
+    } yield response.some
   }
 }

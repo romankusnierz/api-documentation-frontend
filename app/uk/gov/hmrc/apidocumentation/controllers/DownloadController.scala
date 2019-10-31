@@ -22,19 +22,20 @@ import play.api.mvc._
 import uk.gov.hmrc.apidocumentation.ErrorHandler
 import uk.gov.hmrc.apidocumentation.config.ApplicationConfig
 import uk.gov.hmrc.apidocumentation.models.{APIAccessType, Developer, ExtendedAPIDefinition, VersionVisibility}
-import uk.gov.hmrc.apidocumentation.services.{BaseApiDefinitionService, DocumentationService, DownloadService, ProxyAwareApiDefinitionService}
+import uk.gov.hmrc.apidocumentation.services.{DownloadService, ProxyAwareApiDefinitionService}
 import uk.gov.hmrc.http.{HeaderCarrier, NotFoundException}
 import uk.gov.hmrc.play.bootstrap.controller.FrontendController
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.control.NonFatal
 
-class DownloadController @Inject()(documentationService: DocumentationService,
-                                   apiDefinitionService: ProxyAwareApiDefinitionService,
+class DownloadController @Inject()(apiDefinitionService: ProxyAwareApiDefinitionService,
                                    downloadService: DownloadService,
                                    loggedInUserProvider: LoggedInUserProvider,
                                    errorHandler: ErrorHandler)(implicit val appConfig: ApplicationConfig, val ec: ExecutionContext)
     extends FrontendController {
 
+  // TODO - use action to put user into request ?
   def downloadResource(service: String, version: String, resource: String) = Action.async { implicit request =>
 
     (for {
@@ -42,13 +43,13 @@ class DownloadController @Inject()(documentationService: DocumentationService,
       api <- apiDefinitionService.fetchExtendedDefinition(service, email)
       validResource = validateResource(resource)
       result <- fetchResourceForApi(api, version, validResource)
-    } yield {
-      result
-    }) recover {
+    } yield result
+    )
+    .recover {
       case e: NotFoundException =>
         Logger.info(s"Resource not found: ${e.getMessage}")
         NotFound(errorHandler.notFoundTemplate)
-      case e: Throwable =>
+      case NonFatal(e) =>
         Logger.error("Could not load resource", e)
         InternalServerError(errorHandler.internalServerErrorTemplate)
     }

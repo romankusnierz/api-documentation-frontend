@@ -17,30 +17,27 @@
 package uk.gov.hmrc.apidocumentation.connectors
 
 import javax.inject.{Inject, Singleton}
-
 import play.api.http.HttpEntity
 import play.api.http.Status._
 import play.api.libs.ws._
 import play.api.mvc.Results._
 import play.api.mvc._
 import uk.gov.hmrc.apidocumentation.config.ApplicationConfig
-import uk.gov.hmrc.http.{InternalServerException, NotFoundException}
+import uk.gov.hmrc.apidocumentation.services.ProxyAwareApiDefinitionService
+import uk.gov.hmrc.http.{HeaderCarrier, InternalServerException, NotFoundException}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
+// TODO - Remove and replace with direct ApiDefnConnector or further up stack
 @Singleton
-class DownloadConnector @Inject()(ws: WSClient, appConfig: ApplicationConfig) {
+class DownloadConnector @Inject()(apiDefinitionService: ProxyAwareApiDefinitionService, appConfig: ApplicationConfig) {
 
-  private lazy val serviceBaseUrl = appConfig.apiDocumentationUrl
-
-  private def buildRequest(resourceUrl: String): WSRequest = ws.url(resourceUrl)
-
-  private def makeRequest(serviceName: String, version: String, resource: String): Future[StreamedResponse] = {
-    buildRequest(s"$serviceBaseUrl/apis/$serviceName/$version/documentation/$resource").withMethod("GET").stream()
+  private def makeRequest(serviceName: String, version: String, resource: String)(implicit hc: HeaderCarrier): Future[StreamedResponse] = {
+    apiDefinitionService.fetchApiDocumentationResource(serviceName,version,resource).map(_.get)
   }
 
-  def fetch(serviceName: String, version: String, resource: String): Future[Result] = {
+  def fetch(serviceName: String, version: String, resource: String)(implicit hc:HeaderCarrier): Future[Result] = {
 
     makeRequest(serviceName, version, resource).map {
       case StreamedResponse(response, body) =>

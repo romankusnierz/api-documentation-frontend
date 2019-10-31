@@ -31,12 +31,14 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
 object DocumentationService {
-  def ramlUrl(serviceBaseUrl: String, serviceName: String, version: String): String =
-    s"$serviceBaseUrl/apis/$serviceName/$version/documentation/application.raml"
+  private val SCHEMAS = "schemas"
+  private val RAML_FILE_NAME = "application.raml"
 
-  def schemasUrl(serviceBaseUrl: String, serviceName: String, version: String): String =
-    s"$serviceBaseUrl/apis/$serviceName/$version/documentation/schemas"
+  def ramlUrl(serviceName: String, version: String): String =
+    uk.gov.hmrc.apidocumentation.controllers.routes.DownloadController.downloadResource(serviceName,version,RAML_FILE_NAME).url
 
+  def schemasUrl(serviceName: String, version: String): String =
+    uk.gov.hmrc.apidocumentation.controllers.routes.DownloadController.downloadResource(serviceName,version,SCHEMAS).url
 }
 
 class DocumentationService @Inject()(appConfig: ApplicationConfig,
@@ -48,10 +50,8 @@ class DocumentationService @Inject()(appConfig: ApplicationConfig,
 
   val defaultExpiration = 1.hour
 
-  private lazy val serviceBaseUrl = appConfig.apiDocumentationUrl
-
   def fetchRAML(serviceName: String, version: String, cacheBuster: Boolean)(implicit hc: HeaderCarrier): Future[RamlAndSchemas] = {
-      val url = ramlUrl(serviceBaseUrl,serviceName,version)
+      val url = ramlUrl(serviceName,version)
       fetchRAML(url, cacheBuster)
   }
 

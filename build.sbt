@@ -124,7 +124,8 @@ lazy val compile = Seq(
   "uk.gov.hmrc" %% "play-partials" % "6.9.0-play-25",
   "io.dropwizard.metrics" % "metrics-graphite" % "3.2.0",
   "jp.t2v" %% "play2-auth" % "0.14.2",
-  "org.commonjava.googlecode.markdown4j" % "markdown4j" % "2.2-cj-1.1"
+  "org.commonjava.googlecode.markdown4j" % "markdown4j" % "2.2-cj-1.1",
+  "org.typelevel" %% "cats-core" % "2.0.0"
 )
 
 lazy val test = Seq(
@@ -153,6 +154,8 @@ def acceptanceTestFilter(name: String): Boolean = name startsWith "acceptance"
 def endToEndFilter(name: String): Boolean = name startsWith "endtoend"
 
 def unitFilter(name: String): Boolean = name startsWith "unit"
+
+scalacOptions += "-Ypartial-unification"
 
 // Coverage configuration
 coverageMinimum := 80

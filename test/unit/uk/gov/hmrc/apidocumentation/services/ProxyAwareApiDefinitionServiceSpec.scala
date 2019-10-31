@@ -16,10 +16,13 @@
 
 package unit.uk.gov.hmrc.apidocumentation.services
 
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
 import org.mockito.Matchers.{any, eq => eqTo}
 import org.mockito.Mockito._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
+import uk.gov.hmrc.apidocumentation.config.ApplicationConfig
 import uk.gov.hmrc.apidocumentation.models._
 import uk.gov.hmrc.apidocumentation.services.{PrincipalApiDefinitionService, ProxyAwareApiDefinitionService, SubordinateApiDefinitionService}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -68,7 +71,13 @@ class ProxyAwareApiDefinitionServiceSpec
         ExtendedAPIVersion("2.0", APIStatus.ALPHA, Seq.empty, None, Some(sandboxV2Availability))
       ))
 
-    val underTest = new ProxyAwareApiDefinitionService(local, remote)
+    implicit val system = ActorSystem("test")
+    implicit val mat = ActorMaterializer()
+    import scala.concurrent.ExecutionContext.Implicits.global
+
+    val appConfig = mock[ApplicationConfig]
+
+    val underTest = new ProxyAwareApiDefinitionService(local, remote, appConfig)
 
     whenNoApiDefinitions(remote)
 
@@ -164,15 +173,6 @@ class ProxyAwareApiDefinitionServiceSpec
   }
 
   "fetchAPIDefinitions" should {
-
-    "call the connector to fetch the API definitions" in new Setup {
-      theLocalSvcWillReturnTheAPIDefinitions
-      whenNoApiDefinitions(remote)
-
-      await(underTest.fetchAllDefinitions(Some(loggedInUserEmail)))
-
-      verify(local).fetchAllDefinitions(eqTo(Some(loggedInUserEmail)))(any[HeaderCarrier])
-    }
 
     "return the API definitions" in new Setup {
       theLocalSvcWillReturnTheAPIDefinitions
