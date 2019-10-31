@@ -22,8 +22,9 @@ import cats.data.OptionT
 import javax.inject.{Inject, Singleton}
 import play.api.libs.ws.StreamedResponse
 import uk.gov.hmrc.apidocumentation.config.ApplicationConfig
+import uk.gov.hmrc.apidocumentation.controllers.StreamedResponseResourceHelper
 import uk.gov.hmrc.apidocumentation.models.{APIDefinition, ApiDefinitionCombiner, ExtendedAPIDefinition, ExtendedAPIVersion, ExtendedApiDefinitionCombiner}
-import uk.gov.hmrc.http.{HeaderCarrier, NotFoundException}
+import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -36,13 +37,10 @@ class ProxyAwareApiDefinitionService @Inject()(principal: PrincipalApiDefinition
                                                val actorSystem: ActorSystem,
                                                val mat: Materializer
                                               )
-                                              extends BaseApiDefinitionService
-                                                with ExtendedApiDefinitionCombiner
-                                                with ApiDefinitionCombiner {
-
-  private def newNotFoundException(serviceName: String, version: String, resource: String) = {
-    new NotFoundException(s"$resource not found for $serviceName $version")
-  }
+    extends BaseApiDefinitionService
+      with ExtendedApiDefinitionCombiner
+      with ApiDefinitionCombiner
+      with StreamedResponseResourceHelper {
 
   def fetchAllDefinitions(thirdPartyDeveloperEmail: Option[String])
                          (implicit hc: HeaderCarrier): Future[Seq[APIDefinition]] = {
@@ -85,12 +83,12 @@ class ProxyAwareApiDefinitionService @Inject()(principal: PrincipalApiDefinition
 
       subordinateData
         .orElse(principalData)
-        .getOrElseF(Future.failed(newNotFoundException(serviceName, version, resource)))
+        .getOrElseF(failedDueToNotFoundException(serviceName, version, resource))
     }
 
     def fetchPrincipalResourceOnly(serviceName: String, version: String, resource: String) = {
       OptionT(principal.fetchApiDocumentationResource(serviceName, version, resource))
-        .getOrElseF(Future.failed(newNotFoundException(serviceName, version, resource)))
+        .getOrElseF(failedDueToNotFoundException(serviceName, version, resource))
     }
 
     def fetchResource(isAvailableInSandbox: Boolean): Future[StreamedResponse] = {

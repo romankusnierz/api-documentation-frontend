@@ -17,46 +17,30 @@
 package uk.gov.hmrc.apidocumentation.connectors
 
 import javax.inject.{Inject, Singleton}
-import play.api.http.HttpEntity
-import play.api.http.Status._
 import play.api.libs.ws._
-import play.api.mvc.Results._
 import play.api.mvc._
 import uk.gov.hmrc.apidocumentation.config.ApplicationConfig
+import uk.gov.hmrc.apidocumentation.controllers.{StreamedResponseHelper, StreamedResponseResourceHelper}
 import uk.gov.hmrc.apidocumentation.services.ProxyAwareApiDefinitionService
-import uk.gov.hmrc.http.{HeaderCarrier, InternalServerException, NotFoundException}
+import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 // TODO - Remove and replace with direct ApiDefnConnector or further up stack
 @Singleton
-class DownloadConnector @Inject()(apiDefinitionService: ProxyAwareApiDefinitionService, appConfig: ApplicationConfig) {
+class DownloadConnector @Inject()(
+                                   apiDefinitionService: ProxyAwareApiDefinitionService,
+                                   appConfig: ApplicationConfig
+                                 )
+  extends StreamedResponseResourceHelper {
 
   private def makeRequest(serviceName: String, version: String, resource: String)(implicit hc: HeaderCarrier): Future[StreamedResponse] = {
     apiDefinitionService.fetchApiDocumentationResource(serviceName,version,resource).map(_.get)
   }
 
   def fetch(serviceName: String, version: String, resource: String)(implicit hc:HeaderCarrier): Future[Result] = {
-
-    makeRequest(serviceName, version, resource).map {
-      case StreamedResponse(response, body) =>
-        response.status match {
-          case OK => {
-            val contentType = response.headers.get("Content-Type").flatMap(_.headOption)
-              .getOrElse("application/octet-stream")
-
-            response.headers.get("Content-Length") match {
-              case Some(Seq(length)) =>
-                Ok.sendEntity(HttpEntity.Streamed(body, Some(length.toLong), Some(contentType)))
-              case _ =>
-                Ok.chunked(body).as(contentType)
-            }
-          }
-          case NOT_FOUND => throw new NotFoundException(s"$resource not found for $serviceName $version")
-          case _ => throw new InternalServerException(s"Error downloading $resource for $serviceName $version")
-        }
-    }
+    makeRequest(serviceName, version, resource).map( handler(serviceName,version,resource) )
   }
 }
 

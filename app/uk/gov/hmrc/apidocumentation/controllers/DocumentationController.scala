@@ -47,9 +47,11 @@ class DocumentationController @Inject()(documentationService: DocumentationServi
                                         val messagesApi: MessagesApi,
                                         appConfig: ApplicationConfig)
                                        (implicit val ec: ExecutionContext)
-  extends FrontendController with I18nSupport {
+  extends FrontendController
+    with I18nSupport
+    with ApiVersionVisibilityHelper {
 
-  private implicit val ac = appConfig
+  private implicit val ac: ApplicationConfig = appConfig
 
   private lazy val cacheControlHeaders = "cache-control" -> "no-cache,no-store,max-age=0"
   private val homeCrumb = Crumb("Home", routes.DocumentationController.indexPage().url)
@@ -314,13 +316,6 @@ class DocumentationController @Inject()(documentationService: DocumentationServi
       apidocumentation.models.PageAttributes(apiDefinition.name, breadcrumbs, navLinks, sidebarLinks)
     }
 
-    def findVersion(apiOption: Option[ExtendedAPIDefinition]) =
-      for {
-        api <- apiOption
-        apiVersion <- api.versions.find(v => v.version == version)
-        visibility <- apiVersion.visibility
-      } yield (api, apiVersion, visibility)
-
     def renderNotFoundPage = Future.successful(NotFound(errorHandler.notFoundTemplate))
 
     def redirectToLoginPage = {
@@ -344,7 +339,7 @@ class DocumentationController @Inject()(documentationService: DocumentationServi
         Ok(serviceDocumentation(attrs, api, selectedVersion, ramlAndSchemas, email.isDefined)).withHeaders(cacheControlHeaders)
       }
 
-    findVersion(apiOption) match {
+    findVersion(apiOption, version) match {
       case Some((api, selectedVersion, VersionVisibility(_, _, true, _))) if selectedVersion.status == APIStatus.RETIRED =>
         renderRetiredVersionJumpPage(api, selectedVersion)
       case Some((api, selectedVersion, VersionVisibility(_, _, true, _))) => renderDocumentationPage(api, selectedVersion)

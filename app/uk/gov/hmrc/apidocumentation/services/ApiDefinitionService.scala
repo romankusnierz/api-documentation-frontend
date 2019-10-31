@@ -23,7 +23,7 @@ import uk.gov.hmrc.apidocumentation.config.ApplicationConfig
 import uk.gov.hmrc.apidocumentation.connectors.{ApiDefinitionConnector, PrincipalApiDefinitionConnector, SubordinateApiDefinitionConnector}
 import uk.gov.hmrc.apidocumentation.models._
 import uk.gov.hmrc.apidocumentation.utils.LogWrapper
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{HeaderCarrier, NotFoundException}
 import uk.gov.hmrc.play.http.metrics.{API, Metrics}
 
 import scala.concurrent.ExecutionContext.Implicits.global

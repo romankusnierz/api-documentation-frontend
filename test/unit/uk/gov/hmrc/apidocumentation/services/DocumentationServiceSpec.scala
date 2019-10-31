@@ -80,7 +80,7 @@ class DocumentationServiceSpec extends UnitSpec
 
     "return a RAML API object when the load is successful" in new Setup {
       val url = DocumentationService.ramlUrl(serviceName, "1.1")
-      val schemaBase = DocumentationService.schemasUrl(serviceName, "1.1")
+      val schemaBase = DocumentationService.schemasBaseUrl(serviceName, "1.1")
 
       val expectedRaml = mock[RAML]
       when(ramlLoader.load(url)).thenReturn(Success(expectedRaml))
@@ -92,7 +92,7 @@ class DocumentationServiceSpec extends UnitSpec
 
     "clear the cached RAML when cachebuster is set" in new Setup {
       val url = DocumentationService.ramlUrl(serviceName, "1.1")
-      val schemaBase = DocumentationService.schemasUrl(serviceName, "1.1")
+      val schemaBase = DocumentationService.schemasBaseUrl(serviceName, "1.1")
 
       val expectedRaml1 = mock[RAML]
       when(ramlLoader.load(url)).thenReturn(Success(expectedRaml1))

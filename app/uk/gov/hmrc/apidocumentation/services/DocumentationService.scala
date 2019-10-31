@@ -31,22 +31,26 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
 object DocumentationService {
-  private val SCHEMAS = "schemas"
-  private val RAML_FILE_NAME = "application.raml"
-
   def ramlUrl(serviceName: String, version: String): String =
-    uk.gov.hmrc.apidocumentation.controllers.routes.DownloadController.downloadResource(serviceName,version,RAML_FILE_NAME).url
+    uk.gov.hmrc.apidocumentation.controllers.routes.ProxyRamlController.downloadRaml(serviceName,version).url
 
-  def schemasUrl(serviceName: String, version: String): String =
-    uk.gov.hmrc.apidocumentation.controllers.routes.DownloadController.downloadResource(serviceName,version,SCHEMAS).url
+  def schemasBaseUrl(serviceName: String, version: String): String = {
+    val url = ramlUrl(serviceName, version)
+    schemasBaseUrl(url)
+  }
+
+  def schemasBaseUrl(ramlUrl: String): String = {
+    s"${ramlUrl.take(ramlUrl.lastIndexOf('/'))}/schemas"
+  }
 }
 
+// TODO : Is this just raml and schema service ??
 class DocumentationService @Inject()(appConfig: ApplicationConfig,
                                      cache: CacheApi,
                                      ramlLoader: RamlLoader,
                                      schemaService: SchemaService) {
 
-  import DocumentationService.ramlUrl
+  import DocumentationService._
 
   val defaultExpiration = 1.hour
 
@@ -62,7 +66,7 @@ class DocumentationService @Inject()(appConfig: ApplicationConfig,
       blocking {
         cache.getOrElse[Try[RamlAndSchemas]](url, defaultExpiration) {
           ramlLoader.load(url).map(raml => {
-            val schemaBasePath =  s"${url.take(url.lastIndexOf('/'))}/schemas"
+            val schemaBasePath =  schemasBaseUrl(url)
             RamlAndSchemas(raml, schemaService.loadSchemas(schemaBasePath, raml))
           })
         }

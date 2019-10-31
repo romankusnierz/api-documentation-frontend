@@ -33,10 +33,11 @@ class DownloadController @Inject()(apiDefinitionService: ProxyAwareApiDefinition
                                    downloadService: DownloadService,
                                    loggedInUserProvider: LoggedInUserProvider,
                                    errorHandler: ErrorHandler)(implicit val appConfig: ApplicationConfig, val ec: ExecutionContext)
-    extends FrontendController {
+    extends FrontendController
+      with ApiVersionVisibilityHelper {
 
   // TODO - use action to put user into request ?
-  def downloadResource(service: String, version: String, resource: String) = Action.async { implicit request =>
+  def downloadResource(service: String, version: String, resource: String): Action[AnyContent] = Action.async { implicit request =>
 
     (for {
       email <- extractEmail(loggedInUserProvider.fetchLoggedInUser())
@@ -57,12 +58,6 @@ class DownloadController @Inject()(apiDefinitionService: ProxyAwareApiDefinition
 
   private def fetchResourceForApi(apiOption: Option[ExtendedAPIDefinition], version: String, validResource: String)
                                  (implicit hc: HeaderCarrier, request: Request[_]): Future[Result] = {
-    def findVersion(apiOption: Option[ExtendedAPIDefinition]) =
-      for {
-        api <- apiOption
-        apiVersion <- api.versions.find(v => v.version == version)
-        visibility <- apiVersion.visibility
-      } yield (api, apiVersion, visibility)
 
     def renderNotFoundPage =
       Future.successful(NotFound(errorHandler.notFoundTemplate))
@@ -71,7 +66,7 @@ class DownloadController @Inject()(apiDefinitionService: ProxyAwareApiDefinition
       Future.successful(Redirect("/developer/login").withSession(
         "access_uri" -> routes.DocumentationController.renderApiDocumentation(service, version, None).url))
 
-    findVersion(apiOption) match {
+    findVersion(apiOption,version) match {
       case Some((api, _, VersionVisibility(APIAccessType.PRIVATE, false, _, _))) =>
         redirectToLoginPage(api.serviceName)
 
