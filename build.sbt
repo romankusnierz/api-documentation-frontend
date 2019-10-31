@@ -125,10 +125,12 @@ lazy val compile = Seq(
   "io.dropwizard.metrics" % "metrics-graphite" % "3.2.0",
   "jp.t2v" %% "play2-auth" % "0.14.2",
   "org.commonjava.googlecode.markdown4j" % "markdown4j" % "2.2-cj-1.1",
-  "org.typelevel" %% "cats-core" % "2.0.0"
+  "org.typelevel" %% "cats-core" % "2.0.0",
+  "uk.gov.hmrc" %% "simple-reactivemongo" % "7.20.0-play-25"
 )
 
 lazy val test = Seq(
+  "uk.gov.hmrc" %% "reactivemongo-test" % "4.15.0-play-25" % "test,it",
   "info.cukes" %% "cucumber-scala" % "1.2.5" % "test,it",
   "info.cukes" % "cucumber-junit" % "1.2.5" % "test,it",
   "uk.gov.hmrc" %% "hmrctest" % "3.9.0-play-25" % "test,it",
