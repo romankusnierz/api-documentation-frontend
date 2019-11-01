@@ -19,8 +19,9 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
 import cats.data.OptionT
+import com.google.inject.{Inject, Singleton}
 import play.api.http.Status
-import play.api.libs.ws.{DefaultWSResponseHeaders, StreamedResponse, WSBody, WSResponseHeaders}
+import play.api.libs.ws.{DefaultWSResponseHeaders, StreamedResponse, WSResponseHeaders}
 import uk.gov.hmrc.apidocumentation.controllers.StreamedResponseResourceHelper
 import uk.gov.hmrc.apidocumentation.models.{APIDefinition, ExtendedAPIDefinition}
 import uk.gov.hmrc.apidocumentation.repositories.{ResourceData, ResourceRepository}
@@ -28,8 +29,9 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class StoredResourceApiDefinitionService(
-                                          inner: ApiDefinitionService,
+@Singleton
+class StoredResourceApiDefinitionService @ Inject()(
+                                          inner: ProxyAwareApiDefinitionService,
                                           resourceRepository: ResourceRepository
                                         )(
                                           implicit val ec: ExecutionContext,
@@ -74,7 +76,7 @@ class StoredResourceApiDefinitionService(
 
     import cats.implicits._
 
-    def extractContentsAndStore(streamedResponse: StreamedResponse): Future[StreamedResponse] = {
+    def extractContentsAndStore(streamedResponse: StreamedResponse): Future[StreamedResponse] = streamedResponse match {
       case StreamedResponse(wsHeaders, body) if(wsHeaders.status == Status.OK) =>
         for {
                content <- asArrayOfBytes(body)

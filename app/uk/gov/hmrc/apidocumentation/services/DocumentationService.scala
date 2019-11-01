@@ -18,6 +18,7 @@ package uk.gov.hmrc.apidocumentation.services
 
 import javax.inject.Inject
 import org.raml.v2.api.model.v10.resources.Resource
+import play.api.Logger
 import play.api.cache._
 import uk.gov.hmrc.apidocumentation.config.ApplicationConfig
 import uk.gov.hmrc.apidocumentation.models.{RamlAndSchemas, TestEndpoint}
@@ -32,7 +33,8 @@ import scala.util.{Failure, Success, Try}
 
 object DocumentationService {
   def ramlUrl(serviceName: String, version: String): String =
-    uk.gov.hmrc.apidocumentation.controllers.routes.ProxyRamlController.downloadRaml(serviceName,version).url
+    //TODO - make url using absolute url so it works in QA etc.
+    "http://localhost:9680" + uk.gov.hmrc.apidocumentation.controllers.routes.ProxyRamlController.downloadRaml(serviceName,version).url
 
   def schemasBaseUrl(serviceName: String, version: String): String = {
     val url = ramlUrl(serviceName, version)
@@ -60,13 +62,16 @@ class DocumentationService @Inject()(appConfig: ApplicationConfig,
   }
 
   def fetchRAML(url: String, cacheBuster: Boolean): Future[RamlAndSchemas] = {
+    Logger.info(s"@Pomegranate fetchRaml using $url")
     if (cacheBuster) cache.remove(url)
 
     Future {
       blocking {
+        Logger.info(s"@Pomegranate in future")
         cache.getOrElse[Try[RamlAndSchemas]](url, defaultExpiration) {
-          ramlLoader.load(url).map(raml => {
-            val schemaBasePath =  schemasBaseUrl(url)
+        ramlLoader.load(url)
+          .map(raml => {
+          val schemaBasePath =  schemasBaseUrl(url)
             RamlAndSchemas(raml, schemaService.loadSchemas(schemaBasePath, raml))
           })
         }
