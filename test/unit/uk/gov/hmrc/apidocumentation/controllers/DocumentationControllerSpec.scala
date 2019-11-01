@@ -32,7 +32,7 @@ import uk.gov.hmrc.apidocumentation.controllers
 import uk.gov.hmrc.apidocumentation.controllers.DocumentationController
 import uk.gov.hmrc.apidocumentation.models.{Crumb, RamlAndSchemas, TestEndpoint, _}
 import uk.gov.hmrc.apidocumentation.services.{NavigationService, PartialsService, RAML}
-import uk.gov.hmrc.http.{HeaderCarrier, NotFoundException}
+import uk.gov.hmrc.http.{NotFoundException}
 import uk.gov.hmrc.play.partials.HtmlPartial
 import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
 import uk.gov.hmrc.ramltools.domain.{RamlNotFoundException, RamlParseException}
@@ -151,11 +151,13 @@ class DocumentationControllerSpec extends UnitSpec with MockitoSugar with ScalaF
     }
 
     def theDocumentationServiceWillFetchRaml(ramlAndSchemas: RamlAndSchemas) = {
-      when(documentationService.fetchRAML(any(), any(), any())(any[HeaderCarrier])).thenReturn(ramlAndSchemas)
+      implicit val request = mock[Request[_]]
+      when(documentationService.fetchRAML(any(), any(), any())(any[Request[_]]())).thenReturn(ramlAndSchemas)
     }
 
     def theDocumentationServiceWillFailWhenFetchingRaml(exception: Throwable) = {
-      when(documentationService.fetchRAML(any(), any(), any())(any[HeaderCarrier])).thenReturn(failed(exception))
+      implicit val request = mock[Request[_]]
+      when(documentationService.fetchRAML(any(), any(), any())(any[Request[_]]())).thenReturn(failed(exception))
     }
 
     def pageTitle(pagePurpose: String) = {
@@ -590,7 +592,7 @@ class DocumentationControllerSpec extends UnitSpec with MockitoSugar with ScalaF
         TestEndpoint("{service-url}/employers-paye/zzz"),
         TestEndpoint("{service-url}/employers-paye/ddd")
       )
-      when(documentationService.buildTestEndpoints(any(), any())(any())).thenReturn(endpoints)
+      when(documentationService.buildTestEndpoints(any(), any())(any(), any())).thenReturn(endpoints)
       val result = underTest.fetchTestEndpointJson("employers-paye", "1.0")(request)
       val actualPage = await(result)
       actualPage.header.status shouldBe OK

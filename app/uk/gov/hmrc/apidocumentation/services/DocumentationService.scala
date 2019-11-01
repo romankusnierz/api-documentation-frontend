@@ -20,6 +20,7 @@ import javax.inject.Inject
 import org.raml.v2.api.model.v10.resources.Resource
 import play.api.Logger
 import play.api.cache._
+import play.api.mvc.Request
 import uk.gov.hmrc.apidocumentation.config.ApplicationConfig
 import uk.gov.hmrc.apidocumentation.models.{RamlAndSchemas, TestEndpoint}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -32,11 +33,10 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
 object DocumentationService {
-  def ramlUrl(serviceName: String, version: String): String =
-    //TODO - make url using absolute url so it works in QA etc.
-    "http://localhost:9680" + uk.gov.hmrc.apidocumentation.controllers.routes.ProxyRamlController.downloadRaml(serviceName,version).url
+  def ramlUrl(serviceName: String, version: String)(implicit request: Request[_]): String =
+    uk.gov.hmrc.apidocumentation.controllers.routes.ProxyRamlController.downloadRaml(serviceName,version).absoluteURL()
 
-  def schemasBaseUrl(serviceName: String, version: String): String = {
+  def schemasBaseUrl(serviceName: String, version: String)(implicit request: Request[_]): String = {
     val url = ramlUrl(serviceName, version)
     schemasBaseUrl(url)
   }
@@ -56,7 +56,7 @@ class DocumentationService @Inject()(appConfig: ApplicationConfig,
 
   val defaultExpiration = 1.hour
 
-  def fetchRAML(serviceName: String, version: String, cacheBuster: Boolean)(implicit hc: HeaderCarrier): Future[RamlAndSchemas] = {
+  def fetchRAML(serviceName: String, version: String, cacheBuster: Boolean)(implicit request: Request[_]): Future[RamlAndSchemas] = {
       val url = ramlUrl(serviceName,version)
       fetchRAML(url, cacheBuster)
   }
@@ -84,7 +84,7 @@ class DocumentationService @Inject()(appConfig: ApplicationConfig,
     }
   }
 
-  def buildTestEndpoints(service: String, version: String)(implicit hc: HeaderCarrier): Future[Seq[TestEndpoint]] = {
+  def buildTestEndpoints(service: String, version: String)(implicit hc: HeaderCarrier, request: Request[_]): Future[Seq[TestEndpoint]] = {
     fetchRAML(service, version, cacheBuster = true).map { ramlAndSchemas =>
       buildResources(ramlAndSchemas.raml.resources.toSeq)
     }

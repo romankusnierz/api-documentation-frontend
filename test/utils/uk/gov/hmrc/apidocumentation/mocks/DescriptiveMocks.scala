@@ -34,6 +34,7 @@ trait DescriptiveMocks extends Stubs {
     developerIsSignedIn()
     register(serviceName)
     fetchDefinition(serviceName)
+    fetchDefinitionExtended(serviceName)
     fetchRaml(serviceName, version)
   }
 

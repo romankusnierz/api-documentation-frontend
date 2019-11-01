@@ -287,6 +287,7 @@ class DocumentationController @Inject()(documentationService: DocumentationServi
           email <- extractEmail(loggedInUserProvider.fetchLoggedInUser())
           api <- apiDefinitionService.fetchExtendedDefinition(service, email)
           cacheBust = bustCache(appConfig.isStubMode, cacheBuster)
+          _ = Logger.info("So far so good")
           apiDocumentation <- doRenderApiDocumentation(service, version, cacheBust, api, navLinks, email)
         } yield apiDocumentation) recover {
           case e: NotFoundException =>
@@ -333,7 +334,7 @@ class DocumentationController @Inject()(documentationService: DocumentationServi
         makePageAttributes(apiDefinition, selectedVersion, navigationService.sidebarNavigation()), apiDefinition)))
     }
 
-    def renderDocumentationPage(api: ExtendedAPIDefinition, selectedVersion: ExtendedAPIVersion, overviewOnly: Boolean = false) =
+    def renderDocumentationPage(api: ExtendedAPIDefinition, selectedVersion: ExtendedAPIVersion, overviewOnly: Boolean = false)(implicit request: Request[_]) =
       documentationService.fetchRAML(service, version, cacheBuster).map { ramlAndSchemas =>
         val attrs = makePageAttributes(api, selectedVersion, navigationService.apiSidebarNavigation(service, selectedVersion, ramlAndSchemas.raml))
         Ok(serviceDocumentation(attrs, api, selectedVersion, ramlAndSchemas, email.isDefined)).withHeaders(cacheControlHeaders)

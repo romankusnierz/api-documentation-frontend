@@ -21,6 +21,7 @@ import org.mockito.Mockito._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import play.api.cache.CacheApi
+import play.api.mvc.Request
 import uk.gov.hmrc.apidocumentation
 import uk.gov.hmrc.apidocumentation.config.ApplicationConfig
 import uk.gov.hmrc.apidocumentation.models.{RamlAndSchemas, TestEndpoint, _}
@@ -48,6 +49,7 @@ class DocumentationServiceSpec extends UnitSpec
   val api: APIDefinition = apiDefinition("gregorian-calendar")
 
   trait Setup {
+    implicit val request = mock[Request[_]]
     implicit val hc = HeaderCarrier()
     val cache = fakeApplication.injector.instanceOf[CacheApi]
     val ramlLoader = mock[RamlLoader]
