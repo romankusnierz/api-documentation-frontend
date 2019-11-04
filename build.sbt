@@ -142,7 +142,7 @@ lazy val test = Seq(
   "org.mockito" % "mockito-all" % "1.10.19" % "test,it",
   "org.seleniumhq.selenium" % "selenium-java" % "2.53.1" % "test,it",
   "org.seleniumhq.selenium" % "selenium-htmlunit-driver" % "2.52.0",
-  "com.github.tomakehurst" % "wiremock" % "1.58" % "test,it",
+  "com.github.tomakehurst" % "wiremock" % "2.23.1" % "test,it",
   "org.jsoup" % "jsoup" % "1.11.3" % "test,it",
   "jp.t2v" %% "play2-auth-test" % "0.14.2" % "test,it",
   "de.leanovate.play-mockws" %% "play-mockws" % "2.5.1" % "test"

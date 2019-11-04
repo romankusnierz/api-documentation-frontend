@@ -69,6 +69,7 @@ class DocumentationService @Inject()(appConfig: ApplicationConfig,
       blocking {
         Logger.info(s"@Pomegranate in future")
         cache.getOrElse[Try[RamlAndSchemas]](url, defaultExpiration) {
+        Logger.warn(s"About to load from [$url]")
         ramlLoader.load(url)
           .map(raml => {
           val schemaBasePath =  schemasBaseUrl(url)

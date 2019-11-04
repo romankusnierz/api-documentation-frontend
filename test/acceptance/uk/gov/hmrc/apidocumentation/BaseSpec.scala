@@ -19,6 +19,7 @@ package acceptance.uk.gov.hmrc.apidocumentation
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.common.ConsoleNotifier
+import com.github.tomakehurst.wiremock.core.Options
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
 import org.openqa.selenium.WebDriver
 import org.scalatest._
@@ -35,7 +36,7 @@ trait BaseSpec extends FeatureSpec with BeforeAndAfterEach with BeforeAndAfterAl
 
   implicit val webDriver: WebDriver = Env.driver
 
-  var wireMockServer = new WireMockServer(wireMockConfig().port(stubPort).notifier(new ConsoleNotifier(true)))
+  var wireMockServer = new WireMockServer(wireMockConfig().useChunkedTransferEncoding(Options.ChunkedEncodingPolicy.NEVER).port(stubPort).notifier(new ConsoleNotifier(true)))
 
   override def fakeApplication(): Application = {
     GuiceApplicationBuilder()
@@ -57,4 +58,5 @@ trait BaseSpec extends FeatureSpec with BeforeAndAfterEach with BeforeAndAfterAl
     webDriver.manage().deleteAllCookies()
     WireMock.reset()
   }
+
 }

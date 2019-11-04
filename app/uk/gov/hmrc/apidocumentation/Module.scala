@@ -25,8 +25,8 @@ class Module extends AbstractModule {
 
   override def configure() = {
     bind(classOf[Metrics]).toInstance(PlayMetrics)
-    bind(classOf[RamlLoader]).to(classOf[DocumentationRamlLoader])
     bind(classOf[UrlRewriter]).to(classOf[DocumentationUrlRewriter])
+    bind(classOf[RamlLoader]).to(classOf[DocumentationRamlLoader])
   }
 
 }
